@@ -10,7 +10,7 @@ const server = express();
 // to access any files inside the public folder
 server.use(express.static('./public'));
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 
 server.get('/test',(request,response)=>{
