@@ -1,90 +1,103 @@
 'use strict';
 
-// Application Dependencies
+//load the dependencies
 const express = require('express');
-//CORS = Cross Origin Resource Sharing
+// Load Environment Variables from the .env file
+require('dotenv').config(); 
 const cors = require('cors');
-//DOTENV (read our enviroment variable)
-require('dotenv').config();
-const superagent = require('superagent');
+const pg = require('pg');
 
 
-// Application Setup
-const PORT = process.env.PORT || 3030;
+
+//Application setup
 const app = express();
-app.use(cors('https://codefellows.github.io'));
+app.use(cors());
+const PORT = process.env.PORT;
+const client = new pg.Client(process.env.DATABASE_URL);
+// client.connect();
 
 
-//Routes
-app.get('/location', locationHandlerFunc);
-app.get('/weather', weatherHandlerFunc);
-app.get('*', notFoundPageHandler);
+
+// ROUTES
+// localhost:3000/getPeople
+app.get('/getPeople',getPeopleFunc);
+
+// localhost:3000/addPeople?first=Husam&last=Ajour
+app.get('/addPeople',addPeopleFunc);
+
+// localhost:3000/updatePeople?first=Sherry
+app.get('/updatePeople',updatePeopleFunc);
+
+// localhost:3000/deletePeople?first=Husam
+app.get('/deletePeople',deletePeopleFunc);
+
+function getPeopleFunc(req,res) {
+    let SQL = `SELECT * FROM people;`;
+    client.query(SQL)
+    .then(result=>{
+        res.json(result.rows);
+    })
+    .catch(error=>errorHandler(error, req, res))
+}
+
+
+// localhost:3000/addPeople?first=Husam&last=Ajour
+function addPeopleFunc(req,res) {
+    let firstN = req.query.first;
+    let lastN = req.query.last;
+    let SQL = `INSERT INTO people (firstName,lastName) VALUES ($1,$2)`;
+    let safeValues = [firstN,lastN];
+
+    client.query(SQL,safeValues)
+    .then (() =>{
+        res.send('your data has been added successfully!!');
+    })
+}
+
+// localhost:3000/updatePeople?first=Sherry
+function updatePeopleFunc(req,res) {
+    let firstN = req.query.first;
+    let SQL = `UPDATE people SET firstName = $1 WHERE lastName='Quran';`;
+    let safeValues = [firstN];
+
+    client.query(SQL,safeValues)
+    .then (result =>{
+        res.send('your data has been updated successfully!!');
+    })
+}
+
+// localhost:3000/deletePeople?first=Husam
+function deletePeopleFunc(req, res) {
+    let firstName = req.query.first;
+    let safeValues = [firstName];
+    let SQL = `DELETE FROM people WHERE firstName=$1`;
+    client.query(SQL,safeValues)
+        .then(() => {
+            res.send('your data has been deleted successfully!!');
+        })
+}
+
+
+
+
+// Error Handler
+app.get('*', notFoundHandler);
 app.use(errorHandler);
 
-
-
-// https://city-explorer-backend.herokuapp.com/location?city=amman
-function locationHandlerFunc(req, res) {
-    // ? -> query string parameteres
-    let cityName = req.query.city;
-    console.log(req.query);
-    console.log(cityName);
-    console.log('hhhhhhhhhhhhh2222');
-    // to get data from api server -> request url + key
-    let locKey = process.env.LOCATION_KEY;
-    let url = `https://eu1.locationiq.com/v1/search.php?key=${locKey}&q=${cityName}&format=json`;
-
-    // superagent: client-side HTTP request library
-    console.log('before the superagent');
-
-    superagent.get(url)
-        .then(data => {
-            console.log('inside the superagent');
-            console.log(data.body);
-            let locationData = new Location(cityName, data.body);
-            res.send(locationData);
-        })
-        .catch(() => {
-            errorHandler('Location .. Something went wrong!!', req, res);
-        });
-
-    console.log('after the superagent');
-
-
+function notFoundHandler(request,response) { 
+    response.status(404).send('huh????');
 }
 
-function Location(city, geoData) {
-    this.search_query = city;
-    this.formatted_query = geoData[0].display_name;
-    this.latitude = geoData[0].lat;
-    this.longitude = geoData[0].lon;
+function errorHandler(error, request, response) {
+    response.status(500).send(error);
 }
 
-//http://localhost:3000/weather
-function weatherHandlerFunc(req, res) {
-    const geoData = require('./data/weatherbit.json');
-    //   console.log(geoData);
-    let weatherDaily = geoData.data.map(val => {
-        return new Weather(val);
-    });
-    res.send(weatherDaily);
-}
 
-function Weather(day) {
-    this.forecast = day.weather.description;
-    //   this.time = new Date(day.datetime).toString().slice(0,15);
-    this.time = day.datetime;
-
-}
-
-function notFoundPageHandler(req, res) {
-    res.status(404).send('Not Found');
-}
-
-function errorHandler(error, req, res) {
-    res.status(500).send(error);
-}
-
-app.listen(PORT, () => {
-    console.log(`listening on port ${PORT}`)
+client.connect()
+.then(()=>{
+    app.listen(PORT, () =>
+    console.log(`listening on ${PORT}`)
+    );
 })
+
+
