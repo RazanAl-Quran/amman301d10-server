@@ -3,7 +3,7 @@
 // Application Dependencies
 const express = require('express');
 //CORS = Cross Origin Resource Sharing
-const cors = require('cors');
+// const cors = require('cors');
 //DOTENV (read our enviroment variable)
 require('dotenv').config();
 const superagent = require('superagent');
@@ -12,7 +12,7 @@ const superagent = require('superagent');
 // Application Setup
 const PORT = process.env.PORT || 3030;
 const app = express();
-app.use(cors());
+// app.use(cors());
 
 
 //Routes
